@@ -1,4 +1,9 @@
 import mysql.connector
+import os
+from skimage import io
+import torchvision.datasets.mnist as mnist
+import numpy as npy
+
 
 # 登录数据库基本信息
 database_login = {
@@ -8,7 +13,7 @@ database_login = {
     'database': 'handwritten_digits_recognition'
 }
 
-class TrainMapper:
+class TrainTable:
     def __init__(self):
         # 建立数据库连接
         self.cnx = mysql.connector.connect(**database_login)
@@ -45,9 +50,9 @@ class TrainMapper:
         # 提交结果
         self.cnx.commit()
 
-train_mapper = TrainMapper()
+train_table = TrainTable()
 
-class TestMapper:
+class TestTable:
     def __init__(self):
         # 建立数据库连接
         self.cnx = mysql.connector.connect(**database_login)
@@ -84,12 +89,29 @@ class TestMapper:
         # 提交结果
         self.cnx.commit()
 
-test_mapper = TestMapper()
+test_table = TestTable()
 
+def import_into_table(img_path, label_path, table):
+    """
+    将 MNIST 数据集的 “.idx3-ubyte” 格式的文件数据导入到mysql数据库中
+    :param img_path: 图片数据目录
+    :param label_path: 标签数据目录
+    :param table: 导入到目标数据库
+    """
+    train_set = (
+        mnist.read_image_file(img_path),
+        mnist.read_label_file(label_path)
+    )
+    for i, (img, label) in enumerate(zip(train_set[0], train_set[1])):
+        table.insert(img.numpy().tobytes(), int(label))
+
+
+def show_img(id, table):
+    img = table.select_where_id(id)
+    img_data = npy.frombuffer(img[0][1], dtype=npy.uint8)
+    img_data.resize((28, 28))
+    print(img_data)
 
 
 if __name__=="__main__":
-    result = train_mapper.select_where_id(400)
-    # 处理查询结果
-    for row in result:
-        print(row)
+    show_img(1, train_table)
