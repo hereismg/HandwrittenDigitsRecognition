@@ -15,6 +15,6 @@ create table test(
 );
 drop table test;
 
-insert train(image, digit) values (2021, 2);
+insert train(image, digit) values (binary('123'), 2);
 
 select * from train;
