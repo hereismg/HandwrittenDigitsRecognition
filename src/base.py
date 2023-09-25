@@ -3,6 +3,7 @@ import os
 from skimage import io
 import torchvision.datasets.mnist as mnist
 import numpy as npy
+import matplotlib.pyplot as plt
 
 
 # 登录数据库基本信息
@@ -107,11 +108,19 @@ def import_into_table(img_path, label_path, table):
 
 
 def show_img(id, table):
+    # 获取数据
     img = table.select_where_id(id)
     img_data = npy.frombuffer(img[0][1], dtype=npy.uint8)
     img_data.resize((28, 28))
-    print(img_data)
+
+    # 开始绘制
+    plt.imshow(255-img_data, cmap='gray', vmin=0, vmax=255)
+    plt.colorbar()
+    plt.show()
 
 
 if __name__=="__main__":
-    show_img(1, train_table)
+    show_img(100, train_table)
+    show_img(200, train_table)
+    show_img(300, train_table)
+    show_img(400, train_table)
