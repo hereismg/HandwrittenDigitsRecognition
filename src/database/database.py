@@ -1,4 +1,4 @@
-import mysql
+import mysql.connector
 from torchvision.datasets import mnist
 
 # 登录数据库基本信息
