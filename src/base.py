@@ -1,6 +1,4 @@
 import mysql.connector
-import os
-from skimage import io
 import torchvision.datasets.mnist as mnist
 import numpy as npy
 import matplotlib.pyplot as plt
@@ -118,6 +116,30 @@ def show_img(id, table):
     plt.colorbar()
     plt.show()
 
+class NeuralLayer:
+    def __init__(self, total, last_layer):
+        """
+        本层的激活值
+        本层的偏置
+        本层与上一层的权重
+        """
+        self.total = total
+        self.last_layer = last_layer
+
+        self.a = npy.array(total, dtype=npy.float32)
+        self.b = npy.array(total, dtype=npy.float32)
+        if last_layer is not None:
+            self.w = npy.array((total, last_layer.total), dtype=npy.float32)
+
+    def execute(self):
+        self.a = self.w * self.last_layer.a + self.b
+
+class NeuralNetwork:
+    def __init__(self):
+        self.w
+
+    def execute(self, input):
+        pass
 
 if __name__=="__main__":
     show_img(100, train_table)
