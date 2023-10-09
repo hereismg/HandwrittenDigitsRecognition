@@ -13,34 +13,47 @@ def show_img(id, table):
     plt.colorbar()
     plt.show()
 
+
 class NeuralLayer:
-    def __init__(self, total, last_layer):
+    """
+    神经层
+    """
+    def __init__(self, total, last_layer=None):
         """
-        本层的激活值
-        本层的偏置
-        本层与上一层的权重
+        :param total 该神经层的神经元的总数量
+        :param last_layer 上一层神经层
         """
         self.total = total
         self.last_layer = last_layer
 
-        self.a = npy.array(total, dtype=npy.float32)
-        self.b = npy.array(total, dtype=npy.float32)
+        # a：激活值表
+        # b：偏置表
+        # w：权重表
+        self.a = npy.zeros(total, dtype=npy.float32)
+        self.b = npy.zeros(total, dtype=npy.float32)
         if last_layer is not None:
-            self.w = npy.array((total, last_layer.total), dtype=npy.float32)
+            self.w = npy.zeros((total, last_layer.total), dtype=npy.float32)
+
+    def set_last_layer(self, last_layer):
+        self.last_layer = last_layer
+        self.w = npy.zeros((self.total, last_layer.total), dtype=npy.float32)
 
     def execute(self):
         self.a = self.w * self.last_layer.a + self.b
 
+
 class NeuralNetwork:
     def __init__(self):
-        self.w
+        self.network = [NeuralLayer(762), NeuralLayer(16), NeuralLayer(16), NeuralLayer(10)]
+        for i in range(1, len(self.network)):
+            self.network[i].set_last_layer(self.network[i-1])
+
 
     def execute(self, input):
         pass
 
 
 if __name__=="__main__":
-    show_img(100, db.train_table)
-    show_img(200, db.train_table)
-    show_img(300, db.train_table)
-    show_img(400, db.train_table)
+    network = NeuralNetwork()
+    print(network.__dict__)
+
