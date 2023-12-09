@@ -26,7 +26,7 @@ class NeuralLayer:
     """
     神经层
     """
-    def __init__(self, last_total, current_total):
+    def __init__(self, last_total=1, current_total=1):
         """
         :param last_total    前一层的神经元的总数量
         :param current_total 这一层的神经元的总数量
@@ -56,17 +56,29 @@ class NeuralLayer:
             print("NeuralLayer::set_A(): 尺寸不相符！")
         self._A = A
 
+    def load(self, sheet):
+        """
+        读取数据表中的数据
+        :param sheet: 工作表对象。注意不是传入excel，而是sheet
+        """
+        data = [[cell.value for cell in row] for row in sheet.rows]
+        self._W = npy.array([row for row in data[:-2]])
+        self._B = npy.array(data[-2])
+        self._A = npy.array(data[-1])
+
+        self.last_total = self._W.shape[0]
+        self.current_total = self._W.shape[1]
 
     def save(self, sheet):
         """
-        将该层神经网络存储到对于的 excel 表格中
+        将该层神经网络存储到对于的 excel 表格中。
+        在将数据存入到 excel 中，为了方便计算，写入的顺序是：W、B、A ！！！
         :param sheet: 工作表对象。注意不是传入excel，而是sheet
-        :return:
         """
-        sheet.append(list(self._A))
-        sheet.append(list(self._B))
         for item in self._W:
             sheet.append(list(item))
+        sheet.append(list(self._B))
+        sheet.append(list(self._A))
 
 
 class NeuralNetwork:
@@ -105,6 +117,7 @@ class NeuralNetwork:
         # wb.remove('Sheet')
         wb.save(file)
 
+
 if __name__=="__main__":
     # wb = load_workbook('../res/Template.xlsx')
     # sheet = wb['layer1']
@@ -117,8 +130,8 @@ if __name__=="__main__":
 
     # show_img(444, db.train_table)
 
-    network = NeuralNetwork()
-    network.save('backup.xlsx')
+    # network = NeuralNetwork()
+    # network.save('backup.xlsx')
 
     # wb = xl.Workbook()
     # ws = wb.create_sheet('first')
@@ -127,3 +140,12 @@ if __name__=="__main__":
     # layer.set_A([1, 2, 3, 4, 5])
     # layer.save(ws)
     # wb.save('backup.xlsx')
+
+    wb = xl.load_workbook('backup.xlsx')
+
+    layer = NeuralLayer()
+    layer.load(wb['layer1'])
+
+
+    layer.save(wb.create_sheet('newsheet'))
+    wb.save('new.xlsx')
