@@ -26,10 +26,10 @@ class NeuralLayer:
     """
     神经层
     """
-    def __init__(self, current_total, last_total):
+    def __init__(self, last_total, current_total):
         """
-        :param current_total 这一层的神经元的总数量
         :param last_total    前一层的神经元的总数量
+        :param current_total 这一层的神经元的总数量
         """
         self.current_total = current_total
         self.last_total = last_total
@@ -37,9 +37,9 @@ class NeuralLayer:
         # A：激活值表
         # B：偏置表
         # W：权重表
-        self.A = npy.zeros(current_total, dtype=npy.float32)
-        self.B = npy.zeros(current_total, dtype=npy.float32)
-        self.W = npy.zeros((last_total, current_total), dtype=npy.float32)
+        self._A = npy.zeros(current_total, dtype=npy.float32)
+        self._B = npy.zeros(current_total, dtype=npy.float32)
+        self._W = npy.zeros((last_total, current_total), dtype=npy.float32)
 
     def execute(self, A_last: npy.ndarray):
         """
@@ -47,8 +47,14 @@ class NeuralLayer:
         :param A_last: 前一层神经元的激活值
         :return: 无返回值
         """
-        if len(A_last) != self.W.shape[0]: print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
-        self.A = self.W * A_last + self.B
+        if len(A_last) != self._W.shape[0]:
+            print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
+        self._A = self._W * A_last + self._B
+
+    def set_A(self, A):
+        if len(A) != len(self._A):
+            print("NeuralLayer::set_A(): 尺寸不相符！")
+        self._A = A
 
     def save(self, sheet):
         """
@@ -58,14 +64,30 @@ class NeuralLayer:
         """
         pass
 
+
 class NeuralNetwork:
     def __init__(self):
-        self.size = [28*28, 16, 16, 10]
+        self.size = [0, 28*28, 16, 16, 10]
         self.network = [NeuralLayer(self.size[i], self.size[i+1]) for i in range(len(self.size)-1)]
 
     def execute(self, input):
-        pass
+        """
+        根据输入的参数，运行神经网络。
+        注意：输入值应该是一个竖向量
+        :param input: 输入参数，这是一个竖向量
+        """
+        self.network[0].set_A(input)
+        for i in range(1, len(self.network)):
+            self.network[i].execute(self.network[i-1]._A)
 
+    def debug(self):
+        """
+        打印神经网络的结果
+        """
+        print('[', end='')
+        for i in range(self.size[-1] - 1):
+            print(f'{self.network[-1]._A[i]},\t', end='')
+        print(f'{self.network[-1]._A[-1]}]')
 
 if __name__=="__main__":
     # wb = load_workbook('../res/Template.xlsx')
@@ -76,4 +98,8 @@ if __name__=="__main__":
 
     # file_paht = '../res/Template.xlsx'
     # data_frame = pd.read_excel(file_paht)
-    show_img(444, db.train_table)
+
+    # show_img(444, db.train_table)
+
+    network = NeuralNetwork()
+    network.debug()
