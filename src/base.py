@@ -106,6 +106,10 @@ class NeuralNetwork:
         print(f'{self.network[-1]._A[-1]}]')
 
     def save(self, file):
+        """
+        将该层神经网络存储到对于的 excel 中。
+        :param file: 文件路径。
+        """
         wb = xl.Workbook()
 
         number = 1
@@ -116,6 +120,16 @@ class NeuralNetwork:
 
         # wb.remove('Sheet')
         wb.save(file)
+
+    def load(self, file):
+        """
+        将神经网络从 excel 中读取出来
+        :param file: 文件路径
+        """
+        wb = xl.load_workbook(file)
+
+        for i in range(1, len(wb.sheetnames)):
+            self.network[i].load(wb[f'layer{i}'])
 
 
 if __name__=="__main__":
@@ -141,11 +155,16 @@ if __name__=="__main__":
     # layer.save(ws)
     # wb.save('backup.xlsx')
 
-    wb = xl.load_workbook('backup.xlsx')
+    # wb = xl.load_workbook('backup.xlsx')
+    #
+    # layer = NeuralLayer()
+    # layer.load(wb['layer1'])
+    #
+    #
+    # layer.save(wb.create_sheet('newsheet'))
+    # wb.save('new.xlsx')
 
-    layer = NeuralLayer()
-    layer.load(wb['layer1'])
+    network = NeuralNetwork()
+    network.load('backup.xlsx')
 
-
-    layer.save(wb.create_sheet('newsheet'))
-    wb.save('new.xlsx')
+    network.save('new.xlsx')
