@@ -10,13 +10,15 @@ database_login = {
 }
 
 class TrainTable:
+    """
+    训练数据表。AI的训练时所使用的全部数据都在这里。这里的数据都必然包含输入和输出
+    """
     def __init__(self):
         # 建立数据库连接
         self.cnx = mysql.connector.connect(**database_login)
 
         # 创建数据库游标
         self.cursor = self.cnx.cursor()
-
 
     def select_all(self):
         # 执行SQL查询
@@ -27,6 +29,11 @@ class TrainTable:
         return self.cursor.fetchall()
 
     def select_where_id(self, id):
+        """
+        根据数据的 ID 选择图片
+        :param id: 图片的 ID
+        :return: 返回查询结果
+        """
         # 执行SQL查询
         query = f'select * from train where id={id};'
         self.cursor.execute(query)
@@ -37,6 +44,7 @@ class TrainTable:
 
     def insert(self, img, digit):
         """
+        插入图片。
         :param img 图片的二进制数据
         :param digit 图片对于的数字
         """

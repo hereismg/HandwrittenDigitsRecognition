@@ -1,8 +1,16 @@
 import database.database as db
 import numpy as npy
 import matplotlib.pyplot as plt
+from openpyxl import load_workbook
+import pandas as pd
 
 def show_img(id, table):
+    """
+    根据指定 ID，寻找数据库中的制定图片并展示出来。
+    :param id: 图片 ID
+    :param table: 所要寻找的数据表
+    :return: 无返回值
+    """
     # 获取数据
     img = table.select_where_id(id)
     img_data = npy.frombuffer(img[0][1], dtype=npy.uint8)
@@ -18,42 +26,54 @@ class NeuralLayer:
     """
     神经层
     """
-    def __init__(self, total, last_layer=None):
+    def __init__(self, current_total, last_total):
         """
-        :param total 该神经层的神经元的总数量
-        :param last_layer 上一层神经层
+        :param current_total 这一层的神经元的总数量
+        :param last_total    前一层的神经元的总数量
         """
-        self.total = total
-        self.last_layer = last_layer
+        self.current_total = current_total
+        self.last_total = last_total
 
-        # a：激活值表
-        # b：偏置表
-        # w：权重表
-        self.a = npy.zeros(total, dtype=npy.float32)
-        self.b = npy.zeros(total, dtype=npy.float32)
-        if last_layer is not None:
-            self.w = npy.zeros((total, last_layer.total), dtype=npy.float32)
+        # A：激活值表
+        # B：偏置表
+        # W：权重表
+        self.A = npy.zeros(current_total, dtype=npy.float32)
+        self.B = npy.zeros(current_total, dtype=npy.float32)
+        self.W = npy.zeros((last_total, current_total), dtype=npy.float32)
 
-    def set_last_layer(self, last_layer):
-        self.last_layer = last_layer
-        self.w = npy.zeros((self.total, last_layer.total), dtype=npy.float32)
+    def execute(self, A_last: npy.ndarray):
+        """
+        根据给定的前一层神经元的激活值改变该层神经元的激活值
+        :param A_last: 前一层神经元的激活值
+        :return: 无返回值
+        """
+        if len(A_last) != self.W.shape[0]: print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
+        self.A = self.W * A_last + self.B
 
-    def execute(self):
-        self.a = self.w * self.last_layer.a + self.b
-
+    def save(self, sheet):
+        """
+        将该层神经网络存储到对于的 excel 表格中
+        :param sheet: 工作表对象
+        :return:
+        """
+        pass
 
 class NeuralNetwork:
     def __init__(self):
-        self.network = [NeuralLayer(762), NeuralLayer(16), NeuralLayer(16), NeuralLayer(10)]
-        for i in range(1, len(self.network)):
-            self.network[i].set_last_layer(self.network[i-1])
-
+        self.size = [28*28, 16, 16, 10]
+        self.network = [NeuralLayer(self.size[i], self.size[i+1]) for i in range(len(self.size)-1)]
 
     def execute(self, input):
         pass
 
 
 if __name__=="__main__":
-    network = NeuralNetwork()
-    print(network.__dict__)
+    # wb = load_workbook('../res/Template.xlsx')
+    # sheet = wb['layer1']
+    # sheet['A1'] = '2021'
+    # sheet['A2'] = '=A1'
+    # wb.save("../ai/out.xlsx")
 
+    # file_paht = '../res/Template.xlsx'
+    # data_frame = pd.read_excel(file_paht)
+    show_img(444, db.train_table)
