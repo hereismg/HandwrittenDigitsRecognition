@@ -1,7 +1,7 @@
 import database.database as db
 import numpy as npy
 import matplotlib.pyplot as plt
-from openpyxl import load_workbook
+import openpyxl as xl
 import pandas as pd
 
 def show_img(id, table):
@@ -56,13 +56,17 @@ class NeuralLayer:
             print("NeuralLayer::set_A(): 尺寸不相符！")
         self._A = A
 
+
     def save(self, sheet):
         """
         将该层神经网络存储到对于的 excel 表格中
-        :param sheet: 工作表对象
+        :param sheet: 工作表对象。注意不是传入excel，而是sheet
         :return:
         """
-        pass
+        sheet.append(list(self._A))
+        sheet.append(list(self._B))
+        for item in self._W:
+            sheet.append(list(item))
 
 
 class NeuralNetwork:
@@ -89,6 +93,18 @@ class NeuralNetwork:
             print(f'{self.network[-1]._A[i]},\t', end='')
         print(f'{self.network[-1]._A[-1]}]')
 
+    def save(self, file):
+        wb = xl.Workbook()
+
+        number = 1
+        for layer in self.network[1:]:
+            ws = wb.create_sheet(f'layer{number}')
+            layer.save(ws)
+            number += 1
+
+        # wb.remove('Sheet')
+        wb.save(file)
+
 if __name__=="__main__":
     # wb = load_workbook('../res/Template.xlsx')
     # sheet = wb['layer1']
@@ -102,4 +118,12 @@ if __name__=="__main__":
     # show_img(444, db.train_table)
 
     network = NeuralNetwork()
-    network.debug()
+    network.save('backup.xlsx')
+
+    # wb = xl.Workbook()
+    # ws = wb.create_sheet('first')
+    #
+    # layer = NeuralLayer(10, 5)
+    # layer.set_A([1, 2, 3, 4, 5])
+    # layer.save(ws)
+    # wb.save('backup.xlsx')
