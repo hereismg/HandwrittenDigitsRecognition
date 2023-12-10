@@ -3,6 +3,7 @@ import numpy as npy
 import matplotlib.pyplot as plt
 import openpyxl as xl
 import pandas as pd
+import math
 
 def show_img(id, table):
     """
@@ -22,6 +23,10 @@ def show_img(id, table):
     plt.show()
 
 
+def sigmoid(x):
+    return 1 / (1 + npy.exp(-x))
+
+
 class NeuralLayer:
     """
     神经层
@@ -39,7 +44,9 @@ class NeuralLayer:
         # W：权重表
         self._A = npy.zeros(current_total, dtype=npy.float32)
         self._B = npy.zeros(current_total, dtype=npy.float32)
-        self._W = npy.zeros((current_total, last_total), dtype=npy.float32)
+        # self._W = npy.zeros((current_total, last_total), dtype=npy.float32)
+
+        self._W = npy.array(npy.random.random((current_total, last_total)))
 
     def execute(self, A_last):
         """
@@ -50,12 +57,14 @@ class NeuralLayer:
         if len(A_last) != self.last_total:
             print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
         A_last.reshape((len(A_last), 1))
-        self._A = self._W @ A_last + self._B
+        self._A = sigmoid(self._W @ A_last + self._B)
+
 
     def set_A(self, A):
         if len(A) != len(self._A):
             print("NeuralLayer::set_A(): 尺寸不相符！")
         self._A = A
+
 
     def load(self, sheet):
         """
@@ -63,25 +72,23 @@ class NeuralLayer:
         :param sheet: 工作表对象。注意不是传入excel，而是sheet
         """
         data = [[cell.value for cell in row] for row in sheet.rows]
-        self._W = npy.array([row for row in data[:-2]], dtype=npy.float32)
-        self._B = npy.array(data[-2], dtype=npy.float32)
+        self._W = npy.array([row for row in data[:-1]], dtype=npy.float32)
+        self._B = npy.array(data[-1], dtype=npy.float32)
         self._B = self._B[npy.flatnonzero(~npy.isnan(self._B))]
-        self._A = npy.array(data[-1], dtype=npy.float32)
-        self._A = self._A[npy.flatnonzero(~npy.isnan(self._A))]
 
         self.current_total = self._W.shape[0]
         self.last_total = self._W.shape[1]
 
+
     def save(self, sheet):
         """
         将该层神经网络存储到对于的 excel 表格中。
-        在将数据存入到 excel 中，为了方便计算，写入的顺序是：W、B、A ！！！
+        在将数据存入到 excel 中，为了方便计算，写入的顺序是：W、B ！！！
         :param sheet: 工作表对象。注意不是传入excel，而是sheet
         """
         for item in self._W:
             sheet.append(list(item))
         sheet.append(list(self._B))
-        sheet.append(list(self._A))
 
 
 class NeuralNetwork:
@@ -103,10 +110,8 @@ class NeuralNetwork:
         """
         打印神经网络的结果
         """
-        print('[', end='')
-        for i in range(self.size[-1] - 1):
-            print(f'{self.network[-1]._A[i]},\t', end='')
-        print(f'{self.network[-1]._A[-1]}]')
+        for i in range(self.size[-1]):
+            print(f'{i} -> {self.network[-1]._A[i]:.5f}')
 
     def save(self, file):
         """
@@ -124,6 +129,7 @@ class NeuralNetwork:
         # wb.remove('Sheet')
         wb.save(file)
 
+
     def load(self, file):
         """
         将神经网络从 excel 中读取出来
@@ -137,13 +143,13 @@ class NeuralNetwork:
 
 if __name__=="__main__":
     network = NeuralNetwork()
-    # network.save('../res/AI/backup.xlsx')
-    network.load('../res/AI/backup.xlsx')
+    network.save('../res/AI/backup.xlsx')
+    # network.load('../res/AI/backup.xlsx')
 
     show_img(2222, db.train_table)
 
     img = db.train_table.select_where_id(2222)
-    img_data = npy.frombuffer(img[0][1], dtype=npy.uint8)
+    img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
 
     network.execute(img_data)
     network.debug()
