@@ -1,11 +1,24 @@
 import numpy as np
 import pandas as pd
 
-A = np.array([[1, 2], [3, 2], [1, 1], [3, 5], [5,2]])
-data = pd.DataFrame(A)
+m1 = np.array([
+    [1, 2, 3],
+    [3, 3, 4],
+    [4, 4, 5]
+])
 
-writer = pd.ExcelWriter('A.xlsx')		# 写入Excel文件
-data.to_excel(writer, 'page_1', float_format='%.5f')		# ‘page_1’是写入excel的sheet名
-writer.save()
+m2 = np.array([
+    [1, 2, 4]
+])
 
-writer.close()
+m3 = np.array([
+    1, 2, 4
+])
+
+m31 = m3.reshape((1, -1))
+m32 = m3.reshape((-1, 1))
+
+res1 = m1 @ m3.reshape((-1, 1))
+res2 = m1 @ m3
+print(res1)
+print(res2)
