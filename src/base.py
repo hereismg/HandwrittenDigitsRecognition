@@ -26,6 +26,9 @@ def show_img(id, table):
 def sigmoid(x):
     return 1 / (1 + npy.exp(-x))
 
+def sigmoid_partial(x):
+    return sigmoid(x) * (1 - sigmoid(x))
+
 
 class NeuralLayer:
     """
@@ -40,13 +43,18 @@ class NeuralLayer:
         self.current_total = current_total
 
         # A：激活值表
+        # Z：中间值表
+        # A_last：上一层的激活值，也就是输入值
         # B：偏置表
         # W：权重表
         self._A = npy.zeros(current_total, dtype=npy.float32)
+        self._Z = npy.zeros(current_total, dtype=npy.float32)
+        self._A_last = npy.zeros(last_total, dtype=npy.float32)
         self._B = npy.zeros(current_total, dtype=npy.float32)
         # self._W = npy.zeros((current_total, last_total), dtype=npy.float32)
 
         self._W = npy.array(npy.random.random((current_total, last_total)))
+
 
     def execute(self, A_last):
         """
@@ -56,8 +64,25 @@ class NeuralLayer:
         """
         if len(A_last) != self.last_total:
             print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
-        A_last.reshape((len(A_last), 1))
-        self._A = sigmoid(self._W @ A_last + self._B)
+        self._A_last = A_last
+        self._Z = self._W @ self._A_last + self._B
+        self._A = sigmoid(self._Z)
+
+
+    def backpropagation(self, delta):
+        """
+        反向传播算法更新 W、B
+        :param delta: 这一层的 delta 向量
+        :return: 返回后面一层的 delta 向量
+        """
+        delta_base = self._A_last.reshape((1, -1)).repeat(self.current_total, axis=0)
+        sigmoid_Z = sigmoid_partial(self._Z)
+
+        delta_B = sigmoid_Z * 2 * delta
+        delta_W = delta_base * delta_B
+        self._B += delta_B
+        self._W += delta_W
+
 
 
     def set_A(self, A):
