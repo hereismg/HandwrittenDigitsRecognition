@@ -76,12 +76,18 @@ class NeuralLayer:
         :return: 返回后面一层的 delta 向量
         """
         delta_base = self._A_last.reshape((1, -1)).repeat(self.current_total, axis=0)
-        sigmoid_Z = sigmoid_partial(self._Z)
+        sigmoid_p_Z = sigmoid_partial(self._Z)
 
-        delta_B = sigmoid_Z * 2 * delta
+        delta_B = sigmoid_p_Z * 2 * delta
         delta_W = delta_base * delta_B
+
+        delta_A = npy.array([sum(self._W[:,i] * delta_B) / self.current_total for i in range(self._W.shape[1])])
+
         self._B += delta_B
         self._W += delta_W
+
+        return delta_A
+
 
 
 
@@ -131,6 +137,21 @@ class NeuralNetwork:
         for i in range(1, len(self.network)):
             self.network[i].execute(self.network[i-1]._A)
 
+
+    def backpropagation(self, graph, target):
+        """
+        训练神经网络
+        :return:
+        """
+        self.execute(graph)
+        result = [0] * 10
+        result[target] = 1
+
+        delta = self.network[-1]._A - result
+        for i in range(len(self.network)-1, 0, -1):
+            delta = self.network[i].backpropagation(delta)
+
+
     def debug(self):
         """
         打印神经网络的结果
@@ -176,6 +197,5 @@ if __name__=="__main__":
     img = db.train_table.select_where_id(2222)
     img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
 
-    network.execute(img_data)
-    network.debug()
-    # print(img_data)
+    network.backpropagation(img_data, img[0][2])
+    network.save('../res/AI/backup1.xlsx')
