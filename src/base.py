@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import openpyxl as xl
 import pandas as pd
 import math
+import time
 
 def show_img(id, table):
     """
@@ -78,8 +79,8 @@ class NeuralLayer:
         delta_base = self._A_last.reshape((1, -1)).repeat(self.current_total, axis=0)
         sigmoid_p_Z = sigmoid_partial(self._Z)
 
-        delta_B = sigmoid_p_Z * 2 * delta
-        delta_W = delta_base * delta_B
+        delta_B = sigmoid_p_Z * (2 * delta)
+        delta_W = (delta_base.T * delta_B).T
 
         delta_A = npy.array([sum(self._W[:,i] * delta_B) / self.current_total for i in range(self._W.shape[1])])
 
@@ -87,8 +88,6 @@ class NeuralLayer:
         self._W += delta_W
 
         return delta_A
-
-
 
 
     def set_A(self, A):
@@ -127,6 +126,7 @@ class NeuralNetwork:
         self.size = [1, 28*28, 16, 16, 10]
         self.network = [NeuralLayer(self.size[i], self.size[i+1]) for i in range(len(self.size)-1)]
 
+
     def execute(self, input):
         """
         根据输入的参数，运行神经网络。
@@ -159,6 +159,7 @@ class NeuralNetwork:
         for i in range(self.size[-1]):
             print(f'{i} -> {self.network[-1]._A[i]:.5f}')
 
+
     def save(self, file):
         """
         将该层神经网络存储到对于的 excel 中。
@@ -187,15 +188,45 @@ class NeuralNetwork:
             self.network[i].load(wb[f'layer{i}'])
 
 
-if __name__=="__main__":
+def train():
+
     network = NeuralNetwork()
     network.save('../res/AI/backup.xlsx')
     # network.load('../res/AI/backup.xlsx')
 
-    show_img(2222, db.train_table)
+    # show_img(2222, db.train_table)
 
-    img = db.train_table.select_where_id(2222)
+    data_range = (1, 50000)
+    start = time.time()
+    stamp = time.time()
+    for i in range(*data_range):
+
+        img = db.train_table.select_where_id(i)
+        img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
+
+        network.backpropagation(img_data, img[0][2])
+
+        # 每两秒钟输出一次训练进度
+        now = time.time()
+        if now - stamp > 1:
+            print(f'训练进度：{i / (data_range[1] - data_range[0]+1) * 100:.4f}%')
+            stamp = now
+
+    print(f'训练总耗时：{time.time() - start:.2f}s')
+    network.save(f'../res/AI/backup3.xlsx')
+
+
+def exe():
+
+    network = NeuralNetwork()
+    network.save('../res/AI/backup2.xlsx')
+
+    img = db.train_table.select_where_id(40)
     img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
 
-    network.backpropagation(img_data, img[0][2])
-    network.save('../res/AI/backup1.xlsx')
+    network.execute(img_data)
+    network.debug()
+
+
+if __name__=="__main__":
+    train()
