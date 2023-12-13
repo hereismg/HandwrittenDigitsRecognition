@@ -6,6 +6,7 @@ import pandas as pd
 import math
 import time
 
+
 def show_img(id, table):
     """
     根据指定 ID，寻找数据库中的制定图片并展示出来。
@@ -26,6 +27,7 @@ def show_img(id, table):
 
 def sigmoid(x):
     return 1 / (1 + npy.exp(-x))
+
 
 def sigmoid_partial(x):
     return sigmoid(x) * (1 - sigmoid(x))
@@ -82,10 +84,10 @@ class NeuralLayer:
         delta_B = sigmoid_p_Z * (2 * delta)
         delta_W = (delta_base.T * delta_B).T
 
-        delta_A = npy.array([sum(self._W[:,i] * delta_B) / self.current_total for i in range(self._W.shape[1])])
+        delta_A = npy.array([sum(self._W[:,i] * delta_B) for i in range(self._W.shape[1])])
 
-        self._B += delta_B
-        self._W += delta_W
+        self._B -= delta_B
+        self._W -= delta_W
 
         return delta_A
 
@@ -104,7 +106,7 @@ class NeuralLayer:
         data = [[cell.value for cell in row] for row in sheet.rows]
         self._W = npy.array([row for row in data[:-1]], dtype=npy.float32)
         self._B = npy.array(data[-1], dtype=npy.float32)
-        self._B = self._B[npy.flatnonzero(~npy.isnan(self._B))]
+        self._B = self._B[npy.flatnonzero(~npy.isnan(self._B))]  # 这一步是去除 None
 
         self.current_total = self._W.shape[0]
         self.last_total = self._W.shape[1]
@@ -119,6 +121,83 @@ class NeuralLayer:
         for item in self._W:
             sheet.append(list(item))
         sheet.append(list(self._B))
+
+
+class BP_NeuralNetwork:
+    def __init__(self, arg=None):
+        """
+        输入 BP 神经网络的尺寸，应该是长度至少为 3 的元组
+        :param structure:
+        """
+        if isinstance(arg, list):
+            self.structure = arg
+            self.network = [NeuralLayer(last_total=1, current_total=self.structure[0])]
+            self.network += [NeuralLayer(last_total=self.structure[i], current_total=self.structure[i+1])
+                            for i in range(len(self.structure)-1)]
+        elif isinstance(arg, str):
+            wb = xl.load_workbook(arg)
+
+            # 首先载入 strucuture
+            ws = wb['structure']
+            self.structure = [i.value for i in list(ws.iter_rows(min_row=1, max_row=1))[0]]
+
+            # 其次生成对应结构的神经的网络
+            self.network = [NeuralLayer(last_total=1, current_total=self.structure[0])]
+            self.network += [NeuralLayer(last_total=self.structure[i], current_total=self.structure[i+1])
+                            for i in range(len(self.structure)-1)]
+
+            # 最后载入权重和偏置
+            for i in range(1, len(wb.sheetnames)):
+                self.network[i].load(wb[f'layer{i}'])
+
+
+    def forward(self, input):
+        """
+        向前传播
+        注意：输入值应该是一个竖向量
+        :param input: 输入参数，这是一个竖向量
+        """
+        self.network[0].set_A(input)
+        for i in range(1, len(self.network)):
+            self.network[i].execute(self.network[i-1]._A)
+
+
+    def backword(self, target):
+        """
+        向前传播
+        :return:
+        """
+        pass
+
+
+    def debug(self):
+        """
+        打印神经网络的结果
+        """
+        for i in range(self.structure[-1]):
+            print(f'{i} -> {self.network[-1]._A[i]:.5f}')
+
+
+    def save(self, file):
+        """
+        将该层神经网络存储到对于的 excel 中。
+        :param file: 文件路径。
+        """
+        wb = xl.Workbook()
+
+        # 保存 structure
+        ws = wb.create_sheet(f'structure')
+        ws.append(self.structure)
+
+        # 保存 每一层的数据
+        number = 1
+        for layer in self.network[1:]:
+            ws = wb.create_sheet(f'layer{number}')
+            layer.save(ws)
+            number += 1
+
+        wb.remove(wb['Sheet'])
+        wb.save(file)
 
 
 class NeuralNetwork:
@@ -191,12 +270,11 @@ class NeuralNetwork:
 def train():
 
     network = NeuralNetwork()
-    network.save('../res/AI/backup.xlsx')
-    # network.load('../res/AI/backup.xlsx')
+    network.load('../res/AI/backup.xlsx')
 
     # show_img(2222, db.train_table)
 
-    data_range = (1, 50000)
+    data_range = (1, 5000)
     start = time.time()
     stamp = time.time()
     for i in range(*data_range):
@@ -213,19 +291,21 @@ def train():
             stamp = now
 
     print(f'训练总耗时：{time.time() - start:.2f}s')
-    network.save(f'../res/AI/backup3.xlsx')
+    network.save(f'../res/AI/backup8-5000.xlsx')
 
 
 def exe():
 
     network = NeuralNetwork()
-    network.save('../res/AI/backup2.xlsx')
+    network.load('../res/AI/backup8-5000.xlsx')
 
-    img = db.train_table.select_where_id(40)
+    img = db.train_table.select_where_id(90)
     img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
 
     network.execute(img_data)
     network.debug()
+    print(f'result: {img[0][2]}')
+
 
 
 if __name__=="__main__":
