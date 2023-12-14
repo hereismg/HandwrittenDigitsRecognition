@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import openpyxl as xl
 import pandas as pd
 import math
-import time
 
 
 def show_img(id, table):
@@ -25,25 +24,32 @@ def show_img(id, table):
     plt.show()
 
 
-def sigmoid(x):
-    return 1 / (1 + npy.exp(-x))
+class Sigmoid:
+    @staticmethod
+    def f(x):
+        return 1 / (1 + npy.exp(-x))
 
 
-def sigmoid_partial(x):
-    return sigmoid(x) * (1 - sigmoid(x))
+    @staticmethod
+    def f_p(x):
+        return Sigmoid.f(x) * (1 - Sigmoid.f(x))
 
 
 class NeuralLayer:
     """
     神经层
     """
-    def __init__(self, last_total=1, current_total=1):
+    def __init__(self, last_total=1, current_total=1, activation_fun=Sigmoid):
         """
         :param last_total    前一层的神经元的总数量
         :param current_total 这一层的神经元的总数量
         """
         self.last_total = last_total
         self.current_total = current_total
+
+        # 激活函数
+        self.activation_fun = activation_fun
+
 
         # A：激活值表
         # Z：中间值表
@@ -59,43 +65,51 @@ class NeuralLayer:
         self._W = npy.array(npy.random.random((current_total, last_total)))
 
 
-    def execute(self, A_last):
+    def execute(self, A_last: npy.ndarray):
         """
         根据给定的前一层神经元的激活值改变该层神经元的激活值
         :param A_last: 前一层神经元的激活值
         :return: 无返回值
         """
-        if len(A_last) != self.last_total:
-            print("NeuralLayer::execute(): 输入神经元和本层神经元总数不相等！")
         self._A_last = A_last
         self._Z = self._W @ self._A_last + self._B
-        self._A = sigmoid(self._Z)
+        self._A = self.activation_fun.f(self._Z)
 
 
-    def backpropagation(self, delta):
+    def backpropagation(self, delta: npy.ndarray):
         """
         反向传播算法更新 W、B
         :param delta: 这一层的 delta 向量
         :return: 返回后面一层的 delta 向量
         """
-        delta_base = self._A_last.reshape((1, -1)).repeat(self.current_total, axis=0)
-        sigmoid_p_Z = sigmoid_partial(self._Z)
+        # delta_base = self._A_last.reshape((1, -1)).repeat(self.current_total, axis=0)
+        # sigmoid_p_Z = sigmoid_partial(self._Z)
+        #
+        # delta_B = sigmoid_p_Z * (2 * delta)
+        # delta_W = (delta_base.T * delta_B).T
+        #
+        # delta_A = npy.array([sum(self._W[:,i] * delta_B) for i in range(self._W.shape[1])])
+        #
+        # self._B -= delta_B
+        # self._W -= delta_W
+        #
+        # return delta_A
+
+        sigmoid_p_Z = self.activation_fun.f_p(self._Z)
 
         delta_B = sigmoid_p_Z * (2 * delta)
-        delta_W = (delta_base.T * delta_B).T
-
-        delta_A = npy.array([sum(self._W[:,i] * delta_B) for i in range(self._W.shape[1])])
+        delta_W = self._A_last * delta_B.reshape((-1, 1))
+        delta_A = (delta_W.T @ delta_B.reshape((-1, 1))).sum(axis=1)
 
         self._B -= delta_B
         self._W -= delta_W
-
         return delta_A
 
 
-    def set_A(self, A):
+    def set_A(self, A: npy.ndarray):
         if len(A) != len(self._A):
             print("NeuralLayer::set_A(): 尺寸不相符！")
-        self._A = A
+        self._A = npy.array(A)
 
 
     def load(self, sheet):
@@ -121,83 +135,6 @@ class NeuralLayer:
         for item in self._W:
             sheet.append(list(item))
         sheet.append(list(self._B))
-
-
-class BP_NeuralNetwork:
-    def __init__(self, arg=None):
-        """
-        输入 BP 神经网络的尺寸，应该是长度至少为 3 的元组
-        :param structure:
-        """
-        if isinstance(arg, list):
-            self.structure = arg
-            self.network = [NeuralLayer(last_total=1, current_total=self.structure[0])]
-            self.network += [NeuralLayer(last_total=self.structure[i], current_total=self.structure[i+1])
-                            for i in range(len(self.structure)-1)]
-        elif isinstance(arg, str):
-            wb = xl.load_workbook(arg)
-
-            # 首先载入 strucuture
-            ws = wb['structure']
-            self.structure = [i.value for i in list(ws.iter_rows(min_row=1, max_row=1))[0]]
-
-            # 其次生成对应结构的神经的网络
-            self.network = [NeuralLayer(last_total=1, current_total=self.structure[0])]
-            self.network += [NeuralLayer(last_total=self.structure[i], current_total=self.structure[i+1])
-                            for i in range(len(self.structure)-1)]
-
-            # 最后载入权重和偏置
-            for i in range(1, len(wb.sheetnames)):
-                self.network[i].load(wb[f'layer{i}'])
-
-
-    def forward(self, input):
-        """
-        向前传播
-        注意：输入值应该是一个竖向量
-        :param input: 输入参数，这是一个竖向量
-        """
-        self.network[0].set_A(input)
-        for i in range(1, len(self.network)):
-            self.network[i].execute(self.network[i-1]._A)
-
-
-    def backword(self, target):
-        """
-        向前传播
-        :return:
-        """
-        pass
-
-
-    def debug(self):
-        """
-        打印神经网络的结果
-        """
-        for i in range(self.structure[-1]):
-            print(f'{i} -> {self.network[-1]._A[i]:.5f}')
-
-
-    def save(self, file):
-        """
-        将该层神经网络存储到对于的 excel 中。
-        :param file: 文件路径。
-        """
-        wb = xl.Workbook()
-
-        # 保存 structure
-        ws = wb.create_sheet(f'structure')
-        ws.append(self.structure)
-
-        # 保存 每一层的数据
-        number = 1
-        for layer in self.network[1:]:
-            ws = wb.create_sheet(f'layer{number}')
-            layer.save(ws)
-            number += 1
-
-        wb.remove(wb['Sheet'])
-        wb.save(file)
 
 
 class NeuralNetwork:
@@ -267,46 +204,4 @@ class NeuralNetwork:
             self.network[i].load(wb[f'layer{i}'])
 
 
-def train():
 
-    network = NeuralNetwork()
-    network.load('../res/AI/backup.xlsx')
-
-    # show_img(2222, db.train_table)
-
-    data_range = (1, 5000)
-    start = time.time()
-    stamp = time.time()
-    for i in range(*data_range):
-
-        img = db.train_table.select_where_id(i)
-        img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
-
-        network.backpropagation(img_data, img[0][2])
-
-        # 每两秒钟输出一次训练进度
-        now = time.time()
-        if now - stamp > 1:
-            print(f'训练进度：{i / (data_range[1] - data_range[0]+1) * 100:.4f}%')
-            stamp = now
-
-    print(f'训练总耗时：{time.time() - start:.2f}s')
-    network.save(f'../res/AI/backup8-5000.xlsx')
-
-
-def exe():
-
-    network = NeuralNetwork()
-    network.load('../res/AI/backup8-5000.xlsx')
-
-    img = db.train_table.select_where_id(90)
-    img_data = npy.frombuffer(img[0][1], dtype=npy.uint8).astype(npy.float32) / 255
-
-    network.execute(img_data)
-    network.debug()
-    print(f'result: {img[0][2]}')
-
-
-
-if __name__=="__main__":
-    train()

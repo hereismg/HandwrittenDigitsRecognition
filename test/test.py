@@ -1,6 +1,8 @@
 import numpy as npy
 
-m1 = npy.array([1, 2, 3])
-
-m2 = npy.tile(m1.reshape((1, -1)), 5).T
-print(m2)
+m1 = npy.array([[1, 1, 1],
+                [2, 2, 2],
+                [3, 3, 3],
+                [4, 4, 4]])
+m2 = m1 + npy.array([1, 1, 1])
+m3 = npy.array([m1, m2])
